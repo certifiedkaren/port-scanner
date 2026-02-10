@@ -5,8 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
+int cmp(const void *a, const void *b);
 bool check_port(const char *ip, uint16_t port);
 
 int main(int argc, char *argv[]) {
@@ -15,6 +17,8 @@ int main(int argc, char *argv[]) {
     printf("usage: %s <ip>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
+  clock_t t;
+  t = clock();
 
   const char *ip = argv[1];
 
@@ -44,6 +48,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  qsort(open_ports, sizeof(open_ports) / sizeof(uint16_t), sizeof(uint16_t),
+        cmp);
+
   if (count == 0) {
     printf("no ports found open on %s\n", ip);
   } else {
@@ -52,8 +59,12 @@ int main(int argc, char *argv[]) {
       printf("%d\n", open_ports[i]);
     }
   }
-
   fclose(fp);
+
+  t = clock() - t;
+  double time_taken = ((double)t) / CLOCKS_PER_SEC;
+  printf("scanned in %.4fs\n", time_taken);
+
   return 0;
 }
 
@@ -73,8 +84,8 @@ bool check_port(const char *ip, uint16_t port) {
   }
 
   struct timeval timeout;
-  timeout.tv_sec = 2;
-  timeout.tv_usec = 0;
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 300000;
 
   if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) <
       0) {
@@ -102,3 +113,5 @@ bool check_port(const char *ip, uint16_t port) {
     return false;
   }
 }
+
+int cmp(const void *a, const void *b) { return (*(int *)a - *(int *)b); }
